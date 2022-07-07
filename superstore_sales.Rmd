@@ -1,0 +1,155 @@
+---
+title: 'Forecast: Super Store Sales'
+author: "David Jackson"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(fpp2) # Includes forecast package
+library(tidyverse)
+library(DBI)
+library(odbc)
+library(janitor)
+# library(fredr)
+library(lubridate)
+```
+
+## Pull SuperStore Sales date
+
+```{r}
+rm(list = ls())
+con <- DBI::dbConnect(odbc::odbc(), 
+                      Driver = "SQL Server", 
+                      Server = "localhost\\SQLEXPRESS", 
+                      Database = "superstore", 
+                      Trusted_Connection = "True")
+
+```
+
+```{r}
+
+orders <- dbGetQuery(con,"select * from orders")
+orders <- janitor::clean_names(orders)
+```
+
+## Calculate Monthly Sales
+
+```{r}
+monthly <- orders %>% 
+  group_by(month =floor_date(order_date,"month")) %>%
+    summarise(Sales = sum(sales))
+
+```
+
+```{r}
+summary(monthly)
+```
+
+## Quick plot of sales by day
+
+```{r}
+ggplot(monthly) + geom_line(aes(x=month,y=Sales)) +
+  labs(title ="Sales ($) By Month",y="Sales ($)")
+```
+
+## Begin Forecast
+
+### Create Time Series
+
+```{r}
+Y <- ts(monthly$Sales,start=c(2011,1),frequency = 12)
+class(Y) # Class ts
+```
+
+```{r}
+autoplot(Y) + 
+  labs(title ="Time Plot: Super Store Monthly Sales",y="Millions of USD ")
+```
+
+### Data has as strong trend. Calculate Differnce
+
+```{r}
+DY <- diff(Y)
+
+autoplot(DY) + 
+  labs(title ="Time Plot: Change in US Retail Sales ")
+```
+
+### Data Appears trend stationary: Use to investigate seasonality.
+
+```{r}
+ggseasonplot(DY) +
+  labs(title = "Seasonial Plot: Change In Daily Sales")
+```
+
+### Seasonial Plot: sub-series
+
+```{r}
+ggsubseriesplot(DY)
+```
+
+## Forecast with various methods
+### Seasonal Naive (snaive)
+
+```{r}
+fit <- snaive(DY) # Residual sd:
+head(fit)
+```
+```{r}
+summary(fit)
+```
+```{r}
+checkresiduals(fit)
+autoplot(fit)
+```
+
+### ETS forecast
+
+```{r}
+fit_ets <- ets(Y) # sigma:  0.1077
+summary(fit_ets)
+```
+```{r}
+checkresiduals(fit_ets)
+```
+```{r}
+autoplot(fit_ets)
+```
+```{r}
+fcat_ets <- forecast(fit_ets,h=12)
+```
+```{r}
+autoplot(fcat_ets)
+```
+```{r}
+autoplot(fcat_ets,include=12) + labs(title ="4 Years")
+```
+
+## Begin Auto Arima Model
+
+### Create Fit for Model
+
+```{r}
+fit_arima <- auto.arima(Y,d=1,D=1,stepwise = FALSE,approximation = FALSE, trace= TRUE)
+```
+
+```{r}
+summary(fit_arima)
+```
+```{r}
+checkresiduals(fit_arima)
+```
+
+### Forecast and Plot Arima Model
+
+```{r}
+fcast1 <- forecast(fit_arima,h=24)
+```
+```{r}
+autoplot(fcast1)
+```
+```{r}
+autoplot(fcast1,include=24) + labs(title = "Last 3 Years") 
+```
