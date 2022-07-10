@@ -68,3 +68,70 @@ autoplot(h02) +
   labs(title ="Monthly corticosteroid drug subsidy in Australia ",
        subtitle="from 1991 to 2008",y="Aus $ x1,000,000",
        caption = "( Pharmaceutical Benefit Scheme for products falling under ATC code H02 as recorded by the Australian Health Insurance Commission.)")
+
+### Question %
+
+ggseasonplot(writing)
+# 
+ggseasonplot(fancy)
+#
+ggseasonplot(a10)
+#
+ggseasonplot(h02,polar = TRUE)
+#
+
+### Question 6
+
+## Sales of one-family houses
+autoplot(hsales)
+ggseasonplot(hsales)
+ggsubseriesplot(hsales) 
+gglagplot(hsales) 
+ggAcf(hsales)
+
+## Accidental deaths in USA
+autoplot(usdeaths)
+ggseasonplot(usdeaths)
+ggsubseriesplot(usdeaths) 
+gglagplot(usdeaths) 
+ggAcf(usdeaths)
+
+## Quarterly clay brick production
+autoplot(bricksq)
+ggseasonplot(bricksq)
+ggsubseriesplot(bricksq) 
+gglagplot(bricksq) 
+ggAcf(bricksq)
+
+## Annual average sunspot area (1875-2015)
+autoplot(sunspotarea)
+ggseasonplot(sunspotarea) # Data are not seasonal
+ggsubseriesplot(sunspotarea) # Data are not seasonal
+gglagplot(sunspotarea) 
+ggAcf(sunspotarea)
+
+#
+## US finished motor gasoline product supplied.
+autoplot(gasoline)
+ggseasonplot(gasoline)
+ggsubseriesplot(gasoline) 
+gglagplot(gasoline) 
+ggAcf(gasoline)
+
+### Question 7: Airline Arrivals
+
+autoplot(arrivals)
+ggseasonplot(arrivals)
+ggsubseriesplot(arrivals)
+
+### Question 9: Pigs Slaugthered
+
+mypigs <- window(pigs, start=1990)
+autoplot(mypigs)
+ggAcf(mypigs)
+
+## Question Dow Jones
+
+ddj <- diff(dj)
+autoplot(ddj)
+ggAcf(ddj)

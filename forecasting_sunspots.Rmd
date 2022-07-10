@@ -1,0 +1,54 @@
+---
+title: "Forecasting Sunspots Activity"
+author: "David Jackson"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(fpp2) # Includes forecast package
+library(tidyverse)
+library(DBI)
+library(odbc)
+library(janitor)
+library(lubridate)
+```
+## Forecasting Sunspot Actiivity
+
+```{r}
+rm(list = ls())
+isn <- read_csv2("./kh_spots.csv") %>% 
+  remove_empty(which = c("rows","rows")) %>% select(Ymd,g_n,g_s)
+
+```
+```{r}
+  isn_monthly <- isn %>% group_by(Month = floor_date(Ymd,"month")) %>%
+  summarise(G = sum(g_n + g_s))
+```
+
+### Plot Monthly ISN
+
+```{r}
+ggplot(isn_monthly) + geom_col(aes(x=Month,y=G)) + 
+  geom_smooth(aes(x=Month,y=G)) + labs(title ="Monthly Sunspot Groups")
+```
+
+### Split Data Into Training and Test
+
+```{r}
+set.seed(3246)
+isn_split <- initial_time_split(isn_monthly, prop = 3/4)
+train_isn <- training(isn_split)
+test_isn <-  testing(isn_split)
+
+```
+
+#### Plot Training and Test Splits
+
+```{r}
+ggplot(train_isn) + geom_line(aes(x=Month,y=G,col="Train Data")) +
+  geom_line(data=test_isn,aes(x=Month,y=G,col="Test Data")) +
+  labs(title ="Plotting Splits: Training and Test Data")
+```
+
