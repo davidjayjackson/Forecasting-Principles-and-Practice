@@ -9,10 +9,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 library(fpp2) # Includes forecast package
 library(tidyverse)
-library(DBI)
-library(odbc)
 library(janitor)
 library(lubridate)
+library(tidymodels)
 ```
 ## Forecasting Sunspot Actiivity
 
@@ -22,9 +21,17 @@ isn <- read_csv2("./kh_spots.csv") %>%
   remove_empty(which = c("rows","rows")) %>% select(Ymd,g_n,g_s)
 
 ```
+
+### Create Time Series
+
+```{r}
+
+```
+
+
 ```{r}
   isn_monthly <- isn %>% group_by(Month = floor_date(Ymd,"month")) %>%
-  summarise(G = sum(g_n + g_s))
+  summarise(G = sum(g_n + g_s)) %>% filter(G >0)
 ```
 
 ### Plot Monthly ISN
@@ -36,12 +43,13 @@ ggplot(isn_monthly) + geom_col(aes(x=Month,y=G)) +
 
 ### Split Data Into Training and Test
 
+
+
 ```{r}
 set.seed(3246)
 isn_split <- initial_time_split(isn_monthly, prop = 3/4)
 train_isn <- training(isn_split)
 test_isn <-  testing(isn_split)
-
 ```
 
 #### Plot Training and Test Splits
@@ -52,3 +60,111 @@ ggplot(train_isn) + geom_line(aes(x=Month,y=G,col="Train Data")) +
   labs(title ="Plotting Splits: Training and Test Data")
 ```
 
+### Forecast Using: meanf, Diff, snaive,
+
+```{r}
+Y <- ts(train_isn$G,start=c(1945,4),frequency = 12)
+```
+
+#### Mean(f) Forecast
+
+```{r}
+mean_fc <- meanf(Y)
+autoplot(mean_fc,include=36) + labs(title="Mean Forecast")
+```
+
+
+```{r}
+DY <- diff(Y)
+ggseasonplot(DY)
+```
+
+```{r}
+fit <- naive(DY,h=36) # Residual sd: 14.2405
+print(fit)
+summary(fit)
+checkresiduals(fit)
+autoplot(fit,include=72)
+```
+
+
+#### seasonal naive model 
+ 
+```{r}
+fit <- snaive(DY,h=36) # Residual sd: 68.8911
+print(fit)
+summary(fit)
+checkresiduals(fit)
+autoplot(fit,include=60)
+```
+
+### ETS Forecast
+
+```{r}
+fit_ets <- ets(Y) # sigma:  218.8133
+summary(fit_ets)
+checkresiduals(fit_ets)
+autoplot(fit_ets)
+```
+
+### auto.arima model
+#### Best fit: Best model: ARIMA(0,1,1)(2,1,2)[12]
+
+```{r}
+fit_arima <- auto.arima(Y,d=1,D=1,stepwise = FALSE,approximation = FALSE, trace= TRUE)
+summary(fit_arima)
+checkresiduals(fit_arima)
+autoplot(fit_arima)
+# sqrt() # SD 197.8105
+```
+
+#### Forecast using Arima
+
+```{r}
+fcast1 <- forecast(fit_arima,h=24)
+autoplot(fcast1)
+autoplot(fcast1,include=365) + labs(title ="365 Year")
+autoplot(fcast1,include=60) + labs(title = "Last 5 Years") 
+```
+
+### Forecast From 1945 - today - 1 day.
+```{r}
+X <- ts(isn_monthly$G,start=c(1945,4),frequency = 12)
+XX <- diff(X)
+```
+
+```{r}
+fit <- snaive(XX,h=36) # 
+print(fit)
+summary(fit)
+checkresiduals(fit)
+
+autoplot(fit) + labs(title ="Compete Data")
+
+autoplot(fit,include=36) + labs(title ="Include 36")
+autoplot(fit,include=60) + labs(title ="5 Years")
+autoplot(fit,include=365) + labs(title ="includes 365")
+
+```
+
+
+### auto.arima model: Entire Data
+#### Best fit: Best model: ARIMA(0,1,1)(2,1,2)[12]
+
+```{r}
+fit_arima <- auto.arima(X,d=1,D=1,stepwise = FALSE,approximation = FALSE, trace= TRUE)
+summary(fit_arima)
+checkresiduals(fit_arima)
+autoplot(fit_arima)
+# sqrt() # SD 197.8105
+```
+
+#### Forecast using Arima: entire data
+
+```{r}
+fcast1 <- forecast(fit_arima,h=36)
+autoplot(fcast1) + labs(title = "Full Forecast")
+autoplot(fcast1,include=365) + labs(title ="Include 365")
+autoplot(fcast1,include=180) + labs(title ="Include 180")
+autoplot(fcast1,include=60) + labs(title = "Include 60") 
+```
